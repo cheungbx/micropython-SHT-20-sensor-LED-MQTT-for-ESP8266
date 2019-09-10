@@ -1,9 +1,12 @@
 # micropython-SHT-20-sensor-LED-MQTT-for-ESP8266
 This is a micropython program written for ESP8266 Node MCU D1 mini to read SHT 20 temperature and humidity sensor and BH1750fvi lux meter.
 and post to MQTT broker. Then receive on/off command from MQTT server to control LEDs.
-The result is also displayed on the OLED i2C SSD1306
 
-All OLED displya and sensors are connected using a single i2C interface.
+* The result is also displayed on the OLED i2C SSD1306
+
+* press LEFT button to exit the program.
+
+* All OLED displya and sensors are connected using a single i2C interface.
 
 * Here are the pin layouts
 * led = Pin(14, Pin.OUT) 
