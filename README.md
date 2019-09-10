@@ -19,3 +19,8 @@ and post to MQTT broker. Then receive on/off command from MQTT server to control
 
 * i2c = I2C(-1, Pin(5), Pin(4))   # SCL, SDA
 * display = ssd1306.SSD1306_I2C(128, 64, i2c)
+
+* using micropython official version esp8266-20190529-v1.11.bin with ssd1306 already included in the binary.
+* SHT20 module and BH1750fvi module are already included directly in the source code.
+* This code is self-sufficient.
+* No need for installing additional libraries for these modules into the micropython build.
