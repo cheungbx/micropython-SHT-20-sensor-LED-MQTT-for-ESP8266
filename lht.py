@@ -19,6 +19,54 @@ import sys
 import ssd1306
 
 from struct import unpack as unp
+led = Pin(14, Pin.OUT) 
+pump = Pin(13, Pin.OUT)
+btnLeft = Pin(12, Pin.IN, Pin.PULL_UP)
+btnDown = Pin(2, Pin.IN, Pin.PULL_UP)
+btnA = Pin(0, Pin.IN, Pin.PULL_UP)
+buzzer = Pin(15, Pin.OUT)
+
+# turn off everything
+led.on()
+pump.on()
+
+def pressed (btn, wait_release=False) :
+  if not btn.value():
+    sleep_ms (30)
+    if btn.value():
+      return False
+    #wait for key release
+    while wait_release and not btn.value() :
+      sleep_ms (5)
+    return True
+  return False
+  
+# set time using NTP server on the internet
+
+import ntptime    #NTP-time (from pool.ntp.org) 
+import utime
+ntptime.settime()
+tm = utime.localtime(utime.mktime(utime.localtime()) + 8 * 3600)
+tm=tm[0:3] + (0,) + tm[3:6] + (0,)
+rtc = machine.RTC()
+rtc.datetime(tm)
+ 
+
+reported_err = 0
+measure_period_ms = const(20000)
+display_period_ms = const(1000)
+last_measure_ms = 0
+last_display_ms = 0
+
+ledOn = False
+pumpOn = False
+h = 72.5
+h0 = 1.0
+t = 28.3
+t0 = 1.0
+lux = 1000
+lux0 = 0
+
 
 
 # SHT20 default address
@@ -125,139 +173,85 @@ if attempt_count == MAX_ATTEMPTS:
     print('could not connect to the WiFi network')
     sys.exit()
 
-# set time using NTP server on the internet
 
-import ntptime    #NTP-time (from pool.ntp.org) 
-import utime
-ntptime.settime()
-tm = utime.localtime(utime.mktime(utime.localtime()) + 8 * 3600)
-tm=tm[0:3] + (0,) + tm[3:6] + (0,)
-rtc = machine.RTC()
-rtc.datetime(tm)
- 
 
-reported_err = 0
-measure_period_ms = 5000
-display_period_ms = 1000
-loop_delay_ms = 10
-last_measure_ms = 0
-last_display_ms = 0
-debounce_start_ms = 0
-debounce_period_ms = 20
-last_btn1_state = 0
-last_btn2_state = 0
-btn1_state = 0
-btn2_state = 0
-ledOn = False
-pumpOn = False
-h = 72.5
-h0 = 1.0
-t = 28.3
-t0 = 1.0
-lux = 1000
-lux0 = 0
 
-led = Pin(12, Pin.OUT) 
-pump = Pin(14, Pin.OUT)
-btn1 = Pin(2, Pin.IN, Pin.PULL_UP)
-btn2 = Pin(0, Pin.IN, Pin.PULL_UP)
 sht_sensor = SHT20()
 
-while True:
+while not pressed (btnLeft, True):
 
-    # led switch
-    btn1_value = btn1.value()
-    if btn1_value != last_btn1_state :
-        debounce_start_ms = time.ticks_ms()
-    if abs(time.ticks_ms() - debounce_start_ms) >= debounce_period_ms :
-        if btn1_value != btn1_state :
-            btn1_state = btn1_value
-            if btn1_state == 1 :
-                if ledOn :
-# if led is previously ON, now turn it off by outputing High voltage
-                    led.on()
-                    msg = "OFF"
-                    ledOn = False
-                else :
-# if led is previously OFF, now turn it on by outputing Low voltage
-                    led.off()
-                    msg = "ON"
-                    ledOn = True
+  if pressed(btnDown,True):                
+    #LED buttun pressed and released
+    if ledOn :
+      # if led is previously ON, now turn it off by outputing High voltage
+      led.on()
+      msg = "OFF"
+      ledOn = False
+    else :
+      # if led is previously OFF, now turn it on by outputing Low voltage
+      led.off()
+      msg = "ON"
+      ledOn = True
 
- 
-    last_btn1_state = btn1_value
+  # pump switch pressed
+  if pressed(btnA,True): 
+  #LED button  pressed and released
+    if pumpOn :
+      # if pump was ON, turn it off by outputing High voltage
+      pump.on()
+      msg = "OFF"
+      pumpOn = False
+    else :
+      # if pump was  OFF, now turn it on by outputing Low voltage
+      pump.off()
+      msg = "ON"
+      pumpOn = True
 
 
-    # pump switch
-    btn2_value = btn2.value()
-    if btn2_value != last_btn2_state :
-        debounce_start_ms = time.ticks_ms()
-    if abs(time.ticks_ms() - debounce_start_ms) >= debounce_period_ms :
-        if btn2_value != btn2_state :
-            btn2_state = btn2_value
-            if btn2_state == 1 :
-                if pumpOn :
-# if pump is previously ON, now turn it off by outputing High voltage
-                    pump.on()
-                    msg = "OFF"
-                    pumpOn = False
-                else :
-# if pump is previously OFF, now turn it on by outputing Low voltage
-                    pump.off()
-                    msg = "ON"
-                    pumpOn = True
 
-    last_btn2_state = btn2_value
+  if ticks_diff(ticks_ms(), last_measure_ms ) >=  measure_period_ms :
+    # time to take measurements
+    lux = bh1750fvi(i2c) 
+    t = sht_sensor.get_temperature()
+    h = sht_sensor.get_relative_humidity()
 
-    # Sensors
-    try:
+    if lux != lux0 :
+        print('Publish:  lux = {}'.format(lux))
+        lux0 = lux
         
+    if h != h0 :
+        print('Publish:  humidity = {}'.format(h))
+        h0 = h
 
+    msg = (b'{0:3.1f}'.format(t))
+    if t != t0 :
+        print('Publish:  airtemp = {}'.format(t))
+        t0 = t
         
-        if ticks_diff(ticks_ms(), last_measure_ms ) >=  measure_period_ms :
-            lux = bh1750fvi(i2c) 
-            t = sht_sensor.get_temperature()
-            h = sht_sensor.get_relative_humidity()
+    last_measure_ms = ticks_ms()
 
-            if lux != lux0 :
-                print('Publish:  lux = {}'.format(lux))
-                lux0 = lux
-                
-            if h != h0 :
-                print('Publish:  humidity = {}'.format(h))
-                h0 = h
+  if ticks_diff(ticks_ms(), last_display_ms) >= display_period_ms :
+    # time to display 
+    display.fill(0)
+    Y,M,D,H,m,S,ms,W=utime.localtime()
+    timetext ='%s-%s %s:%s:%s' % (fill_zero(M),fill_zero(D),fill_zero(H),fill_zero(m),fill_zero(S))       
+    display.text(timetext,0,0)
+    display.text('Lux = {}'.format(lux), 0, 15)
+    display.text(b'{0:3.1f} %'.format(h), 0, 30)
+    display.text(b'{0:3.1f} C'.format(t), 64, 30)  
+    if ledOn :
+        display.text("LED ON", 0, 48)
+    else :
+        display.text("LED OFF", 0, 48)
+                     
+    if pumpOn :
+        display.text("PUMP ON", 64, 48)
+    else :
+        display.text("PUMP OFF", 64, 48)
 
-            msg = (b'{0:3.1f}'.format(t))
-            if t != t0 :
-                print('Publish:  airtemp = {}'.format(t))
-                t0 = t
-                
-            last_measure_ms = ticks_ms()
+    display.show()  
+    last_display_ms = time.ticks_ms()
 
-        if ticks_diff(ticks_ms(), last_display_ms) >= display_period_ms :
-            display.fill(0)
-            Y,M,D,H,m,S,ms,W=utime.localtime()
-            timetext ='%s-%s %s:%s:%s' % (fill_zero(M),fill_zero(D),fill_zero(H),fill_zero(m),fill_zero(S))       
-            display.text(timetext,0,0)
-            display.text('Lux = {}'.format(lux), 0, 15)
-            display.text(b'{0:3.1f} %'.format(h), 0, 30)
-            display.text(b'{0:3.1f} C'.format(t), 64, 30)  
-            if ledOn :
-                display.text("LED ON", 0, 48)
-            else :
-                display.text("LED OFF", 0, 48)
-                             
-            if pumpOn :
-                display.text("PUMP ON", 64, 48)
-            else :
-                display.text("PUMP OFF", 64, 48)
 
-            display.show()  
-            last_display_ms = time.ticks_ms()
-            
-    except KeyboardInterrupt:
-        print('Ctrl-C pressed...exiting')
-        sys.exit()
-    
 
 
