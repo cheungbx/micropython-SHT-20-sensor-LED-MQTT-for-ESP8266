@@ -1,12 +1,5 @@
 # ESP8266 iot humdity temperature sensor with LED switch and pump switch , MQTT and  NTP time.
-# GPIO4 aka D2 for SDA of I2C OLED SSD1306 
-# GPIO5 aka D1 for SCL of I2C OLED SSD1306 
 
-
-# led  D6  GPIO 12
-# pump D5  GPIO 14
-# btn1 D4  GPIO 2
-# btn2 D3  GPIO 0
 
 import machine
 import network
@@ -25,6 +18,10 @@ btnLeft = Pin(12, Pin.IN, Pin.PULL_UP)
 btnDown = Pin(2, Pin.IN, Pin.PULL_UP)
 btnA = Pin(0, Pin.IN, Pin.PULL_UP)
 buzzer = Pin(15, Pin.OUT)
+
+
+i2c = I2C(-1, Pin(5), Pin(4))   # SCL, SDA
+display = ssd1306.SSD1306_I2C(128, 64, i2c)
 
 # turn off everything
 led.on()
@@ -146,8 +143,6 @@ def fill_blank(n):
  
 
 
-i2c = I2C(-1, Pin(5), Pin(4))   # SCL, SDA
-display = ssd1306.SSD1306_I2C(128, 64, i2c)
         
 # WiFi connection information
 WIFI_SSID = 'BILLYWIFI'
