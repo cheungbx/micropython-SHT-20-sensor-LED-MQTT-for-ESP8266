@@ -145,8 +145,8 @@ def fill_blank(n):
 
         
 # WiFi connection information
-WIFI_SSID = 'BILLYWIFI'
-WIFI_PASSWORD = 'Xolmem13'
+WIFI_SSID = 'yourWIFIssid'
+WIFI_PASSWORD = 'yourWIFIPassword'
 
 # turn off the WiFi Access Point
 ap_if = network.WLAN(network.AP_IF)
